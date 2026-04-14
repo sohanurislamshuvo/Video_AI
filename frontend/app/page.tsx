@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import PromptList from "@/components/PromptList";
+import PromptList, { type Clip } from "@/components/PromptList";
 import OptionsBar from "@/components/OptionsBar";
 import ProgressBar from "@/components/ProgressBar";
 import DownloadCard from "@/components/DownloadCard";
@@ -10,13 +10,14 @@ import { downloadUrl, pollJob, startJob, type JobStatus } from "@/lib/api";
 type Aspect = "16:9" | "9:16";
 
 export default function Page() {
-  const [prompts, setPrompts] = useState<string[]>([""]);
+  const [defaultDuration, setDefaultDuration] = useState(10);
+  const [clips, setClips] = useState<Clip[]>([{ prompt: "", duration: 10 }]);
   const [aspect, setAspect] = useState<Aspect>("16:9");
   const [fade, setFade] = useState(false);
-  const [duration, setDuration] = useState(10);
   const [job, setJob] = useState<JobStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [lastTotalSeconds, setLastTotalSeconds] = useState<number>(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const busy =
@@ -55,27 +56,32 @@ export default function Page() {
 
   const handleSubmit = async () => {
     setError(null);
-    const clean = prompts.map((p) => p.trim()).filter(Boolean);
-    if (clean.length === 0) {
+    const validClips = clips
+      .map((c) => ({ prompt: c.prompt.trim(), duration: c.duration }))
+      .filter((c) => c.prompt.length > 0);
+    if (validClips.length === 0) {
       setError("Add at least one prompt.");
       return;
     }
     setSubmitting(true);
     setJob(null);
+    const totalSeconds = validClips.reduce((s, c) => s + c.duration, 0);
+    setLastTotalSeconds(totalSeconds);
     try {
       const { job_id } = await startJob({
-        prompts: clean,
+        prompts: validClips.map((c) => c.prompt),
+        durations: validClips.map((c) => c.duration),
         aspect_ratio: aspect,
         resolution: "720p",
         fade,
-        duration,
+        duration: defaultDuration,
       });
       setJob({
         job_id,
         status: "queued",
         progress: 0,
         current_clip: 0,
-        total_clips: clean.length,
+        total_clips: validClips.length,
       });
       beginPolling(job_id);
     } catch (e) {
@@ -98,7 +104,7 @@ export default function Page() {
           Grok Batch Video Generator
         </h1>
         <p className="mt-2 text-sm text-neutral-400">
-          Enter one prompt per 10-second clip. They will be generated with{" "}
+          Each prompt becomes one clip (1–10s). They're generated with{" "}
           <span className="font-mono text-neutral-300">grok-imagine-video</span>{" "}
           and merged in order.
         </p>
@@ -115,16 +121,21 @@ export default function Page() {
         <OptionsBar
           aspect={aspect}
           fade={fade}
-          duration={duration}
+          duration={defaultDuration}
           disabled={busy}
           onAspectChange={setAspect}
           onFadeChange={setFade}
-          onDurationChange={setDuration}
+          onDurationChange={setDefaultDuration}
         />
       </section>
 
       <section className="mb-6">
-        <PromptList prompts={prompts} duration={duration} disabled={busy} onChange={setPrompts} />
+        <PromptList
+          clips={clips}
+          defaultDuration={defaultDuration}
+          disabled={busy}
+          onChange={setClips}
+        />
       </section>
 
       <section className="mb-6 flex flex-wrap items-center gap-3">
@@ -166,7 +177,7 @@ export default function Page() {
             url={downloadUrl(job.job_id)}
             clipCount={job.total_clips}
             aspect={aspect}
-            duration={duration}
+            totalSeconds={lastTotalSeconds}
           />
         </section>
       )}

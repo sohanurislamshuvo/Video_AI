@@ -53,7 +53,7 @@ export default function OptionsBar({
 
       <div className="min-w-[220px] flex-1">
         <div className="mb-1 flex items-center justify-between text-xs uppercase tracking-wider text-neutral-500">
-          <span>Clip Duration</span>
+          <span>Default Clip Duration</span>
           <span className="font-mono text-neutral-300">{duration}s</span>
         </div>
         <input

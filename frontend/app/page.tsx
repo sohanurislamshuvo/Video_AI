@@ -102,9 +102,7 @@ export default function Page() {
           Grok Batch Video Generator
         </h1>
         <p className="mt-2 text-sm text-neutral-400">
-          Each prompt becomes one clip (1–10s). They're generated with{" "}
-          <span className="font-mono text-neutral-300">grok-imagine-video</span>{" "}
-          and merged in order.
+          Each prompt becomes one clip (1–10s).
         </p>
       </header>
 

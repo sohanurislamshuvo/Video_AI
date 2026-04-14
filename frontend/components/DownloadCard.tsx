@@ -4,9 +4,10 @@ type Props = {
   url: string;
   clipCount: number;
   aspect: string;
+  duration: number;
 };
 
-export default function DownloadCard({ url, clipCount, aspect }: Props) {
+export default function DownloadCard({ url, clipCount, aspect, duration }: Props) {
   return (
     <div className="rounded-2xl border border-emerald-700/40 bg-gradient-to-br from-emerald-900/30 to-neutral-900 p-6 text-center">
       <div className="mb-1 text-xs uppercase tracking-wider text-emerald-400">
@@ -17,7 +18,7 @@ export default function DownloadCard({ url, clipCount, aspect }: Props) {
       </h3>
       <p className="mt-1 text-sm text-neutral-400">
         {clipCount} clip{clipCount === 1 ? "" : "s"} · {aspect} · ~
-        {clipCount * 10}s total
+        {clipCount * duration}s total
       </p>
       <a
         href={url}

@@ -1,5 +1,5 @@
 from typing import List, Literal, Optional
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 AspectRatio = Literal["16:9", "9:16"]
@@ -12,6 +12,10 @@ class GenerateRequest(BaseModel):
     aspect_ratio: AspectRatio = "16:9"
     resolution: Resolution = "720p"
     fade: bool = False
+    # Fallback duration used when ``durations`` is missing or a value is out of range.
+    duration: int = Field(10, ge=1, le=10)
+    # Optional per-clip durations, parallel to ``prompts``. If omitted, every clip uses ``duration``.
+    durations: Optional[List[int]] = None
 
     @field_validator("prompts")
     @classmethod
@@ -20,6 +24,21 @@ class GenerateRequest(BaseModel):
         if any(not p for p in cleaned):
             raise ValueError("Prompts must be non-empty strings.")
         return cleaned
+
+    @model_validator(mode="after")
+    def check_durations(self) -> "GenerateRequest":
+        if self.durations is not None:
+            if len(self.durations) != len(self.prompts):
+                raise ValueError("`durations` length must match `prompts` length.")
+            for d in self.durations:
+                if not (1 <= d <= 10):
+                    raise ValueError("Each clip duration must be between 1 and 10 seconds.")
+        return self
+
+    def resolved_durations(self) -> List[int]:
+        if self.durations is not None:
+            return list(self.durations)
+        return [self.duration] * len(self.prompts)
 
 
 class GenerateResponse(BaseModel):

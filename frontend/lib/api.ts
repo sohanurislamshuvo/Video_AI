@@ -10,9 +10,11 @@ export type JobStatus = {
 
 export type GenerateBody = {
   prompts: string[];
+  durations: number[];
   aspect_ratio: "16:9" | "9:16";
   resolution: "720p";
   fade: boolean;
+  duration: number;
 };
 
 const API_BASE = "/api";

@@ -13,6 +13,7 @@ export default function Page() {
   const [prompts, setPrompts] = useState<string[]>([""]);
   const [aspect, setAspect] = useState<Aspect>("16:9");
   const [fade, setFade] = useState(false);
+  const [duration, setDuration] = useState(10);
   const [job, setJob] = useState<JobStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -67,6 +68,7 @@ export default function Page() {
         aspect_ratio: aspect,
         resolution: "720p",
         fade,
+        duration,
       });
       setJob({
         job_id,
@@ -113,14 +115,16 @@ export default function Page() {
         <OptionsBar
           aspect={aspect}
           fade={fade}
+          duration={duration}
           disabled={busy}
           onAspectChange={setAspect}
           onFadeChange={setFade}
+          onDurationChange={setDuration}
         />
       </section>
 
       <section className="mb-6">
-        <PromptList prompts={prompts} disabled={busy} onChange={setPrompts} />
+        <PromptList prompts={prompts} duration={duration} disabled={busy} onChange={setPrompts} />
       </section>
 
       <section className="mb-6 flex flex-wrap items-center gap-3">
@@ -162,6 +166,7 @@ export default function Page() {
             url={downloadUrl(job.job_id)}
             clipCount={job.total_clips}
             aspect={aspect}
+            duration={duration}
           />
         </section>
       )}

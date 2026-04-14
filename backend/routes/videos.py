@@ -4,7 +4,7 @@ import threading
 from pathlib import Path
 from typing import List
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
 from models.schemas import GenerateRequest, GenerateResponse, JobStatus
@@ -18,6 +18,7 @@ router = APIRouter()
 def _run_job(
     job_id: str,
     prompts: List[str],
+    durations: List[int],
     aspect_ratio: str,
     resolution: str,
     fade: bool,
@@ -34,7 +35,7 @@ def _run_job(
             xai_service.generate_clip(
                 prompt=prompt,
                 out_path=out,
-                duration=10,
+                duration=durations[i],
                 aspect_ratio=aspect_ratio,
                 resolution=resolution,
             )
@@ -57,12 +58,19 @@ def _run_job(
 
 
 @router.post("/generate-videos", response_model=GenerateResponse)
-def generate_videos(req: GenerateRequest, background: BackgroundTasks) -> GenerateResponse:
+def generate_videos(req: GenerateRequest) -> GenerateResponse:
     state = jobs.create(total_clips=len(req.prompts))
     # Use a dedicated thread so the request returns instantly even if the SDK call is blocking.
     t = threading.Thread(
         target=_run_job,
-        args=(state.job_id, req.prompts, req.aspect_ratio, req.resolution, req.fade),
+        args=(
+            state.job_id,
+            req.prompts,
+            req.resolved_durations(),
+            req.aspect_ratio,
+            req.resolution,
+            req.fade,
+        ),
         daemon=True,
     )
     t.start()

@@ -2,11 +2,12 @@
 
 type Props = {
   prompts: string[];
+  duration?: number;
   disabled?: boolean;
   onChange: (next: string[]) => void;
 };
 
-export default function PromptList({ prompts, disabled, onChange }: Props) {
+export default function PromptList({ prompts, duration = 10, disabled, onChange }: Props) {
   const update = (i: number, value: string) => {
     const next = prompts.slice();
     next[i] = value;
@@ -30,7 +31,7 @@ export default function PromptList({ prompts, disabled, onChange }: Props) {
         >
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-medium uppercase tracking-wider text-neutral-400">
-              Clip {i + 1} · 10s
+              Clip {i + 1} · {duration}s
             </span>
             <button
               type="button"
@@ -46,7 +47,7 @@ export default function PromptList({ prompts, disabled, onChange }: Props) {
             onChange={(e) => update(i, e.target.value)}
             disabled={disabled}
             rows={3}
-            placeholder="Describe this 10-second scene…"
+            placeholder={`Describe this ${duration}-second scene…`}
             className="w-full resize-y rounded-lg border border-neutral-800 bg-neutral-950 p-3 text-sm text-neutral-100 outline-none transition placeholder:text-neutral-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:opacity-60"
           />
         </div>

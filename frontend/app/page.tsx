@@ -10,7 +10,6 @@ import { downloadUrl, pollJob, startJob, type JobStatus } from "@/lib/api";
 type Aspect = "16:9" | "9:16";
 
 export default function Page() {
-  const [defaultDuration, setDefaultDuration] = useState(10);
   const [clips, setClips] = useState<Clip[]>([{ prompt: "", duration: 10 }]);
   const [aspect, setAspect] = useState<Aspect>("16:9");
   const [fade, setFade] = useState(false);
@@ -74,7 +73,6 @@ export default function Page() {
         aspect_ratio: aspect,
         resolution: "720p",
         fade,
-        duration: defaultDuration,
       });
       setJob({
         job_id,
@@ -121,18 +119,16 @@ export default function Page() {
         <OptionsBar
           aspect={aspect}
           fade={fade}
-          duration={defaultDuration}
           disabled={busy}
           onAspectChange={setAspect}
           onFadeChange={setFade}
-          onDurationChange={setDefaultDuration}
         />
       </section>
 
       <section className="mb-6">
         <PromptList
           clips={clips}
-          defaultDuration={defaultDuration}
+          defaultDuration={10}
           disabled={busy}
           onChange={setClips}
         />

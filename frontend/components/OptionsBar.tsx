@@ -5,21 +5,17 @@ type Aspect = "16:9" | "9:16";
 type Props = {
   aspect: Aspect;
   fade: boolean;
-  duration: number;
   disabled?: boolean;
   onAspectChange: (a: Aspect) => void;
   onFadeChange: (f: boolean) => void;
-  onDurationChange: (d: number) => void;
 };
 
 export default function OptionsBar({
   aspect,
   fade,
-  duration,
   disabled,
   onAspectChange,
   onFadeChange,
-  onDurationChange,
 }: Props) {
   const aspectButton = (value: Aspect, label: string) => {
     const active = aspect === value;
@@ -48,28 +44,6 @@ export default function OptionsBar({
         <div className="inline-flex">
           {aspectButton("16:9", "16:9 Landscape")}
           {aspectButton("9:16", "9:16 Portrait")}
-        </div>
-      </div>
-
-      <div className="min-w-[220px] flex-1">
-        <div className="mb-1 flex items-center justify-between text-xs uppercase tracking-wider text-neutral-500">
-          <span>Default Clip Duration</span>
-          <span className="font-mono text-neutral-300">{duration}s</span>
-        </div>
-        <input
-          type="range"
-          min={1}
-          max={10}
-          step={1}
-          value={duration}
-          disabled={disabled}
-          onChange={(e) => onDurationChange(Number(e.target.value))}
-          className="w-full accent-indigo-500 disabled:opacity-50"
-        />
-        <div className="mt-1 flex justify-between text-[10px] text-neutral-600">
-          <span>1s</span>
-          <span>5s</span>
-          <span>10s</span>
         </div>
       </div>
 

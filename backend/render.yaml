@@ -1,0 +1,17 @@
+# Render deployment configuration
+# Docs: https://render.com/docs/render-yaml
+
+services:
+  - type: web
+    name: video-ai-backend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: singapore
+
+    # These must be set manually in the Render dashboard (secrets)
+    envVars:
+      - key: XAI_API_KEY
+        sync: false          # Render will prompt you to fill this in the dashboard
+      - key: ALLOWED_ORIGINS
+        sync: false          # Set to your Vercel URL after frontend is deployed

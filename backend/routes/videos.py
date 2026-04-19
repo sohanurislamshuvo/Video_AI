@@ -4,7 +4,7 @@ import threading
 from pathlib import Path
 from typing import List
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
 from models.schemas import GenerateRequest, GenerateResponse, JobStatus
@@ -107,3 +107,77 @@ def download_final(job_id: str):
         media_type="video/mp4",
         filename=f"grok-video-{job_id[:8]}.mp4",
     )
+
+
+# ---------------------------------------------------------------------------
+# Upload & Merge  (new feature)
+# ---------------------------------------------------------------------------
+
+ALLOWED_MIME = {"video/mp4", "video/quicktime", "video/x-matroska", "video/webm", "video/avi"}
+MAX_UPLOAD_VIDEOS = 10
+
+
+def _run_merge_uploads(job_id: str, saved_clips: List[Path], fade: bool) -> None:
+    """Background thread: merge pre-saved upload clips and finalise the job."""
+    try:
+        jobs.update(job_id, status="merging", progress=10, current_clip=len(saved_clips))
+        out_final = final_path(job_id)
+        # seamless=True → uses ffmpeg concat filter (re-encode) to guarantee
+        # zero gap / no delay at every clip join point in the output video.
+        merge_service.merge(saved_clips, out_final, fade=fade, seamless=True)
+        jobs.update(
+            job_id,
+            status="completed",
+            progress=100,
+            final_path=str(out_final),
+        )
+    except Exception as e:  # noqa: BLE001
+        jobs.update(job_id, status="failed", error=str(e))
+
+
+@router.post("/merge-uploads", response_model=GenerateResponse)
+async def merge_uploads(
+    files: List[UploadFile] = File(..., description="1–10 video files to merge in order"),
+    fade: bool = Form(False),
+) -> GenerateResponse:
+    """Accept up to 10 uploaded video files and merge them into a single MP4."""
+    if not files:
+        raise HTTPException(status_code=422, detail="Upload at least one video file.")
+    if len(files) > MAX_UPLOAD_VIDEOS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Maximum {MAX_UPLOAD_VIDEOS} videos allowed, got {len(files)}.",
+        )
+
+    state = jobs.create(total_clips=len(files))
+    jdir = job_dir(state.job_id)
+    jobs.update(state.job_id, status="queued", progress=5)
+
+    # Save uploaded files using the async API — do NOT use shutil.copyfileobj
+    # or upload.file directly inside an async endpoint; that reads a sync-backed
+    # SpooledTemporaryFile and can reset the socket mid-stream.
+    saved_clips: List[Path] = []
+    for i, upload in enumerate(files):
+        # Best-effort MIME check (browsers sometimes send octet-stream).
+        if upload.content_type and upload.content_type not in ALLOWED_MIME:
+            jobs.update(state.job_id, status="failed",
+                        error=f"File {i + 1} has unsupported type '{upload.content_type}'.")
+            raise HTTPException(
+                status_code=422,
+                detail=f"File {i + 1}: unsupported content type '{upload.content_type}'.",
+            )
+        suffix = Path(upload.filename or "video.mp4").suffix or ".mp4"
+        dest = jdir / f"upload_{i:03d}{suffix}"
+        content = await upload.read()   # ✅ correct async read
+        dest.write_bytes(content)
+        saved_clips.append(dest)
+        jobs.update(state.job_id, progress=5 + round((i + 1) / len(files) * 5))
+
+    # Merge on a daemon thread so this request returns immediately.
+    t = threading.Thread(
+        target=_run_merge_uploads,
+        args=(state.job_id, saved_clips, fade),
+        daemon=True,
+    )
+    t.start()
+    return GenerateResponse(job_id=state.job_id)

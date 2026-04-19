@@ -5,11 +5,16 @@ import PromptList, { type Clip } from "@/components/PromptList";
 import OptionsBar from "@/components/OptionsBar";
 import ProgressBar from "@/components/ProgressBar";
 import DownloadCard from "@/components/DownloadCard";
+import UploadMerge from "@/components/UploadMerge";
 import { downloadUrl, pollJob, startJob, type JobStatus } from "@/lib/api";
 
 type Aspect = "16:9" | "9:16";
+type Tab = "generate" | "upload";
 
 export default function Page() {
+  const [tab, setTab] = useState<Tab>("generate");
+
+  // ── Generate tab state ──────────────────────────────────────────────────
   const [clips, setClips] = useState<Clip[]>([{ prompt: "", duration: 10 }]);
   const [aspect, setAspect] = useState<Aspect>("16:9");
   const [fade, setFade] = useState(false);
@@ -21,7 +26,10 @@ export default function Page() {
 
   const busy =
     submitting ||
-    (job != null && (job.status === "queued" || job.status === "generating" || job.status === "merging"));
+    (job != null &&
+      (job.status === "queued" ||
+        job.status === "generating" ||
+        job.status === "merging"));
 
   useEffect(() => {
     return () => {
@@ -95,85 +103,133 @@ export default function Page() {
     setError(null);
   };
 
+  // ── Tab button helper ───────────────────────────────────────────────────
+  const tabBtn = (value: Tab, label: string, icon: React.ReactNode) => {
+    const active = tab === value;
+    return (
+      <button
+        type="button"
+        onClick={() => setTab(value)}
+        className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all
+          ${active
+            ? value === "upload"
+              ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-900/40"
+              : "bg-indigo-500 text-white shadow-lg shadow-indigo-900/40"
+            : "border border-neutral-800 bg-neutral-900/60 text-neutral-400 hover:border-neutral-700 hover:text-neutral-200"
+          }`}
+      >
+        {icon}
+        {label}
+      </button>
+    );
+  };
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
+      {/* Header */}
       <header className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
           Grok Batch Video Generator
         </h1>
         <p className="mt-2 text-sm text-neutral-400">
-          Each prompt becomes one clip (1–10s).
+          AI-generate clips from prompts, or upload &amp; merge your own videos.
         </p>
       </header>
 
-      {error && (
-        <div className="mb-4 rounded-xl border border-red-800/60 bg-red-950/40 p-4 text-sm text-red-200">
-          <strong className="mr-2 font-semibold">Error:</strong>
-          {error}
-        </div>
-      )}
-
-      <section className="mb-6">
-        <OptionsBar
-          aspect={aspect}
-          fade={fade}
-          disabled={busy}
-          onAspectChange={setAspect}
-          onFadeChange={setFade}
-        />
-      </section>
-
-      <section className="mb-6">
-        <PromptList
-          clips={clips}
-          defaultDuration={10}
-          disabled={busy}
-          onChange={setClips}
-        />
-      </section>
-
-      <section className="mb-6 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={busy}
-          className="inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-900/40 transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {busy ? (
-            <>
-              <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
-              Working…
-            </>
-          ) : (
-            <>Generate &amp; Merge All Clips</>
-          )}
-        </button>
-        {job && (job.status === "completed" || job.status === "failed") && (
-          <button
-            type="button"
-            onClick={reset}
-            className="rounded-xl border border-neutral-800 px-4 py-3 text-sm text-neutral-300 transition hover:border-neutral-700 hover:text-white"
-          >
-            Start Over
-          </button>
+      {/* Tab switcher */}
+      <div className="mb-8 flex flex-wrap gap-3">
+        {tabBtn(
+          "generate",
+          "AI Generate",
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+          </svg>
         )}
-      </section>
+        {tabBtn(
+          "upload",
+          "Upload & Merge",
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+          </svg>
+        )}
+      </div>
 
-      {job && (
-        <section className="mb-6">
-          <ProgressBar job={job} />
-        </section>
-      )}
+      {/* ── UPLOAD & MERGE TAB ── */}
+      {tab === "upload" && <UploadMerge />}
 
-      {job?.status === "completed" && (
-        <section>
-          <DownloadCard
-            url={downloadUrl(job.job_id)}
-            clipCount={job.total_clips}
-            aspect={aspect}
-            totalSeconds={lastTotalSeconds}
-          />
-        </section>
+      {/* ── AI GENERATE TAB ── */}
+      {tab === "generate" && (
+        <>
+          {error && (
+            <div className="mb-4 rounded-xl border border-red-800/60 bg-red-950/40 p-4 text-sm text-red-200">
+              <strong className="mr-2 font-semibold">Error:</strong>
+              {error}
+            </div>
+          )}
+
+          <section className="mb-6">
+            <OptionsBar
+              aspect={aspect}
+              fade={fade}
+              disabled={busy}
+              onAspectChange={setAspect}
+              onFadeChange={setFade}
+            />
+          </section>
+
+          <section className="mb-6">
+            <PromptList
+              clips={clips}
+              defaultDuration={10}
+              disabled={busy}
+              onChange={setClips}
+            />
+          </section>
+
+          <section className="mb-6 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={busy}
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-900/40 transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {busy ? (
+                <>
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
+                  Working…
+                </>
+              ) : (
+                <>Generate &amp; Merge All Clips</>
+              )}
+            </button>
+            {job && (job.status === "completed" || job.status === "failed") && (
+              <button
+                type="button"
+                onClick={reset}
+                className="rounded-xl border border-neutral-800 px-4 py-3 text-sm text-neutral-300 transition hover:border-neutral-700 hover:text-white"
+              >
+                Start Over
+              </button>
+            )}
+          </section>
+
+          {job && (
+            <section className="mb-6">
+              <ProgressBar job={job} />
+            </section>
+          )}
+
+          {job?.status === "completed" && (
+            <section>
+              <DownloadCard
+                url={downloadUrl(job.job_id)}
+                clipCount={job.total_clips}
+                aspect={aspect}
+                totalSeconds={lastTotalSeconds}
+              />
+            </section>
+          )}
+        </>
       )}
 
       <footer className="mt-16 text-center text-xs text-neutral-600">

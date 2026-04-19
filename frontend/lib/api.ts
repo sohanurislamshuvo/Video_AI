@@ -40,3 +40,23 @@ export async function pollJob(jobId: string): Promise<JobStatus> {
 export function downloadUrl(jobId: string): string {
   return `${API_BASE}/download/${jobId}`;
 }
+
+export async function uploadAndMerge(
+  files: File[],
+  fade: boolean
+): Promise<{ job_id: string }> {
+  const form = new FormData();
+  for (const file of files) {
+    form.append("files", file);
+  }
+  form.append("fade", fade ? "true" : "false");
+  const res = await fetch(`${API_BASE}/merge-uploads`, {
+    method: "POST",
+    body: form,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(text || `Upload failed: ${res.status}`);
+  }
+  return res.json();
+}

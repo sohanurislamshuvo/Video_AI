@@ -122,9 +122,13 @@ def _run_merge_uploads(job_id: str, saved_clips: List[Path], fade: bool) -> None
     try:
         jobs.update(job_id, status="merging", progress=10, current_clip=len(saved_clips))
         out_final = final_path(job_id)
-        # seamless=True → uses ffmpeg concat filter (re-encode) to guarantee
-        # zero gap / no delay at every clip join point in the output video.
-        merge_service.merge(saved_clips, out_final, fade=fade, seamless=True)
+        if fade:
+            merge_service.merge(saved_clips, out_final, fade=True)
+        else:
+            try:
+                merge_service.merge(saved_clips, out_final, seamless=False)
+            except RuntimeError:
+                merge_service.merge(saved_clips, out_final, seamless=True)
         jobs.update(
             job_id,
             status="completed",

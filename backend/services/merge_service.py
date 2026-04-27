@@ -107,8 +107,9 @@ def concat_seamless(clips: List[Path], out_path: Path) -> Path:
             "-filter_complex", filter_complex,
             "-map", "[outv]",
             "-map", "[outa]",
-            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "20",
-            "-c:a", "aac", "-b:a", "160k",
+            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "ultrafast", "-crf", "23",
+            "-threads", "1",
+            "-c:a", "aac", "-b:a", "128k",
             "-movflags", "+faststart",
             str(out_path),
         ]
@@ -122,7 +123,8 @@ def concat_seamless(clips: List[Path], out_path: Path) -> Path:
             *inputs,
             "-filter_complex", filter_complex,
             "-map", "[outv]",
-            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "20",
+            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "ultrafast", "-crf", "23",
+            "-threads", "1",
             "-movflags", "+faststart",
             str(out_path),
         ]
@@ -191,8 +193,9 @@ def concat_with_fade(clips: List[Path], out_path: Path, fade_duration: float = 0
         "-filter_complex", filter_complex,
         "-map", prev_v,
         "-map", prev_a,
-        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "20",
-        "-c:a", "aac", "-b:a", "160k",
+        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "ultrafast", "-crf", "23",
+        "-threads", "1",
+        "-c:a", "aac", "-b:a", "128k",
         "-movflags", "+faststart",
         str(out_path),
     ]
@@ -205,7 +208,8 @@ def concat_with_fade(clips: List[Path], out_path: Path, fade_duration: float = 0
             *inputs,
             "-filter_complex", v_only,
             "-map", prev_v,
-            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "20",
+            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "ultrafast", "-crf", "23",
+            "-threads", "1",
             "-movflags", "+faststart",
             str(out_path),
         ]
